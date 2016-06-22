@@ -8,20 +8,9 @@
 <html>
     <head>
         <title>Error: @error.Message</title>
-        <style type="text/css">
-            body { font-family: verdana, arial, helvetic; font-size: x-small; }
-            table.collection { border-collapse: collapse; border-spacing: 0; border: 1px solid black; width: 100% }
-            table.collection tr { vertical-align: top; }
-            table.collection th { text-align: left; border: 1px solid black; padding: 4px; font-weight: bold; }
-            table.collection td { border: 1px solid black; padding: 4px; }
-            td, th, pre { font-size: x-small; } 
-            #errorDetail { padding: 1em; background-color: #FFFFCC; } 
-            #errorMessage { font-size: medium; font-style: italic; color: maroon; }
-            h1 { font-size: small; }
-        </style>
     </head>
-    <body>
-        <p id="errorMessage">@error.Type: @error.Message</p>
+    <body style="font-family: verdana, arial, helvetic; font-size: small;">
+        <p style="font-size: medium; font-style: italic; color: maroon;">@error.Type: @error.Message</p>
         @if (error.Time != DateTime.MinValue)
         {
             <p>Generated: @error.Time.ToUniversalTime().ToString("r")</p>
@@ -31,7 +20,7 @@
 @* NOTE! DO NOT REMOVE this comment
    Eliminates white space literal prior to pre tag in generated 
    code and is important for correct formatting
-            *@<pre id="errorDetail">@error.Detail</pre>
+            *@<pre style="padding: 1em; background-color: #FFFFCC; font-size: small;">@error.Detail</pre>
         }
         @foreach (var collection in 
             from collection in new[] 
@@ -55,16 +44,18 @@
             }
         )
         {
-            <div id="@collection.Id">
-                <h1>@collection.Title</h1>
-                <table class="collection">
-                    <tr><th>Name</th>            
-                        <th>Value</th></tr>
-                    @foreach (var item in collection.Items)
-                    {
-                        <tr><td>@item.Key</td>
-                            <td>@item.Value</td></tr>
-                    }
+            <div>
+                <h1 style="font-size: small;">@collection.Title</h1>
+                <table style="border-collapse: collapse; border-spacing: 0; border: 1px solid black; width: 100%;">
+                    <tr style="vertical-align: top;">
+                        <th style="text-align: left; border: 1px solid black; padding: 4px; font-weight: bold; font-size: small;">Name</th>            
+                        <th style="text-align: left; border: 1px solid black; padding: 4px; font-weight: bold; font-size: small;">Value</th></tr>
+                @foreach (var item in collection.Items)
+                {
+                    <tr style="vertical-align: top;">
+                        <td style="border: 1px solid black; padding: 4px; font-size: small;">@item.Key</td>
+                        <td style="border: 1px solid black; padding: 4px; font-size: small;">@item.Value</td></tr>
+                }
                 </table>
             </div>
         }
