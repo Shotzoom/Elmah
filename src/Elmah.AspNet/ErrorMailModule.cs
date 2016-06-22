@@ -26,20 +26,12 @@
 namespace Elmah
 {
     #region Imports
-    
+
     using System;
     using System.Diagnostics;
-    using System.Globalization;
     using System.Web;
-    using System.IO;
     using System.Net.Mail;
-    using MailAttachment = System.Net.Mail.Attachment;
-
-    using IDictionary = System.Collections.IDictionary;
     using ThreadPool = System.Threading.ThreadPool;
-    using WaitCallback = System.Threading.WaitCallback;
-    using Encoding = System.Text.Encoding;
-    using NetworkCredential = System.Net.NetworkCredential;
 
     #endregion
 
@@ -80,18 +72,7 @@ namespace Elmah
 
     public class ErrorMailModule : HttpModuleBase, IExceptionFiltering
     {
-        private string _mailSender;
-        private string _mailRecipient;
-        private string _mailCopyRecipient;
-        private string _mailSubjectFormat;
-        private MailPriority _mailPriority;
-        private bool _reportAsynchronously;
-        private string _smtpServer;
-        private int _smtpPort;
-        private string _authUserName;
-        private string _authPassword;
-        private bool _noYsod;
-        private bool _useSsl;
+        private ErrorMail _mail;
 
         public event ExceptionFilterEventHandler Filtering;
         public event ErrorMailEventHandler Mailing;
@@ -106,65 +87,40 @@ namespace Elmah
         {
             if (application == null)
                 throw new ArgumentNullException("application");
-            
+
             //
             // Get the configuration section of this module.
             // If it's not there then there is nothing to initialize or do.
             // In this case, the module is as good as mute.
             //
 
-            var config = (IDictionary) GetConfig();
+            ErrorMail mail = ErrorMail.Create();
 
-            if (config == null)
+            if (mail == null)
+            {
                 return;
-
-            //
-            // Extract the settings.
-            //
-
-            var mailRecipient = GetSetting(config, "to");
-            var mailSender = GetSetting(config, "from", mailRecipient);
-            var mailCopyRecipient = GetSetting(config, "cc", string.Empty);
-            var mailSubjectFormat = GetSetting(config, "subject", string.Empty);
-            var mailPriority = (MailPriority) Enum.Parse(typeof(MailPriority), GetSetting(config, "priority", MailPriority.Normal.ToString()), true);
-            var reportAsynchronously = Convert.ToBoolean(GetSetting(config, "async", bool.TrueString));
-            var smtpServer = GetSetting(config, "smtpServer", string.Empty);
-            var smtpPort = Convert.ToUInt16(GetSetting(config, "smtpPort", "0"), CultureInfo.InvariantCulture);
-            var authUserName = GetSetting(config, "userName", string.Empty);
-            var authPassword = GetSetting(config, "password", string.Empty);
-            var sendYsod = Convert.ToBoolean(GetSetting(config, "noYsod", bool.FalseString));
-            var useSsl = Convert.ToBoolean(GetSetting(config, "useSsl", bool.FalseString));
+            }
+            
             //
             // Hook into the Error event of the application.
             //
 
             application.Error += OnError;
             ErrorSignal.Get(application).Raised += OnErrorSignaled;
-            
+
             //
             // Finally, commit the state of the module if we got this far.
             // Anything beyond this point should not cause an exception.
             //
 
-            _mailRecipient = mailRecipient;
-            _mailSender = mailSender;
-            _mailCopyRecipient = mailCopyRecipient;
-            _mailSubjectFormat = mailSubjectFormat;
-            _mailPriority = mailPriority;
-            _reportAsynchronously = reportAsynchronously;
-            _smtpServer = smtpServer;
-            _smtpPort = smtpPort;
-            _authUserName = authUserName;
-            _authPassword = authPassword;
-            _noYsod = sendYsod;
-            _useSsl = useSsl;
+            _mail = mail;
         }
-        
+
         /// <summary>
         /// Determines whether the module will be registered for discovery
         /// in partial trust environments or not.
         /// </summary>
-        
+
         protected override bool SupportDiscoverability
         {
             get { return true; }
@@ -176,7 +132,7 @@ namespace Elmah
         
         protected virtual string MailSender
         {
-            get { return _mailSender; }
+            get { return _mail.MailSender; }
         }
 
         /// <summary>
@@ -193,7 +149,7 @@ namespace Elmah
 
         protected virtual string MailRecipient
         {
-            get { return _mailRecipient; }
+            get { return _mail.MailRecipient; }
         }
 
         /// <summary>
@@ -210,7 +166,7 @@ namespace Elmah
 
         protected virtual string MailCopyRecipient
         {
-            get { return _mailCopyRecipient; }
+            get { return _mail.MailCopyRecipient; }
         }
 
         /// <summary>
@@ -225,7 +181,7 @@ namespace Elmah
 
         protected virtual string MailSubjectFormat
         {
-            get { return _mailSubjectFormat; }
+            get { return _mail.MailSubjectFormat; }
         }
 
         /// <summary>
@@ -234,7 +190,7 @@ namespace Elmah
         
         protected virtual MailPriority MailPriority
         {
-            get { return _mailPriority; }
+            get { return _mail.MailPriority; }
         }
 
         /// <summary>
@@ -243,7 +199,7 @@ namespace Elmah
 
         protected string SmtpServer
         {
-            get { return _smtpServer; }
+            get { return _mail.SmtpServer; }
         }
 
         /// <summary>
@@ -252,7 +208,7 @@ namespace Elmah
 
         protected int SmtpPort
         {
-            get { return _smtpPort; }
+            get { return _mail.SmtpPort; }
         }
 
         /// <summary>
@@ -261,7 +217,7 @@ namespace Elmah
 
         protected string AuthUserName
         {
-            get { return _authUserName; }
+            get { return _mail.AuthUserName; }
         }
 
         /// <summary>
@@ -271,7 +227,7 @@ namespace Elmah
 
         protected string AuthPassword
         {
-            get { return _authPassword; }
+            get { return _mail.AuthPassword; }
         }
 
         /// <summary>
@@ -282,7 +238,7 @@ namespace Elmah
         
         protected bool NoYsod
         {
-            get { return _noYsod; }
+            get { return !_mail.SendYsod; }
         }
 
         /// <summary>
@@ -292,7 +248,7 @@ namespace Elmah
 
         protected bool UseSsl
         {
-            get { return _useSsl; }
+            get { return _mail.UseSsl; }
         }
 
         /// <summary>
@@ -343,7 +299,7 @@ namespace Elmah
 
             var error = new Error(e, context);
 
-            if (_reportAsynchronously)
+            if (_mail.ReportAsynchronously)
                 ReportErrorAsync(error);
             else
                 ReportError(error);
@@ -417,106 +373,46 @@ namespace Elmah
         protected virtual void ReportError(Error error)
         {
             if (error == null)
-                throw new ArgumentNullException("error");
-
-            //
-            // Start by checking if we have a sender and a recipient.
-            // These values may be null if someone overrides the
-            // implementation of OnInit but does not override the
-            // MailSender and MailRecipient properties.
-            //
-
-            var sender = this.MailSender ?? string.Empty;
-            var recipient = this.MailRecipient ?? string.Empty;
-            var copyRecipient = this.MailCopyRecipient ?? string.Empty;
-
-            if (recipient.Length == 0)
-                return;
-
-            //
-            // Create the mail, setting up the sender and recipient and priority.
-            //
-
-            var mail = new MailMessage();
-            mail.Priority = this.MailPriority;
-
-            mail.From = new MailAddress(sender);
-            mail.To.Add(recipient);
-            
-            if (copyRecipient.Length > 0)
-                mail.CC.Add(copyRecipient);
-
-            //
-            // Format the mail subject.
-            // 
-
-            var subjectFormat = Mask.EmptyString(this.MailSubjectFormat, "Error ({1}): {0}");
-            mail.Subject = string.Format(subjectFormat, error.Message, error.Type).
-                Replace('\r', ' ').Replace('\n', ' ');
-
-            //
-            // Format the mail body.
-            //
-
-            var formatter = CreateErrorFormatter();
-
-            var bodyWriter = new StringWriter();
-            formatter.Format(bodyWriter, error);
-            mail.Body = bodyWriter.ToString();
-
-            switch (formatter.MimeType)
             {
-                case "text/html": mail.IsBodyHtml = true; break;
-                case "text/plain": mail.IsBodyHtml = false; break;
-
-                default :
-                {
-                    throw new ApplicationException(string.Format(
-                        "The error mail module does not know how to handle the {1} media type that is created by the {0} formatter.",
-                        formatter.GetType().FullName, formatter.MimeType));
-                }
+                throw new ArgumentNullException("error");
             }
 
-            var args = new ErrorMailEventArgs(error, mail);
+            // We need to pass these values in explicitly because they
+            // may have been overridden in an inheriting implementation.
+            MailMessage message = _mail.CreateMessage(
+                error,
+                this.CreateErrorFormatter(),
+                this.MailCopyRecipient,
+                this.MailPriority,
+                this.MailRecipient,
+                this.MailSender,
+                this.MailSubjectFormat);
 
             try
             {
-                //
-                // If an HTML message was supplied by the web host then attach 
-                // it to the mail if not explicitly told not to do so.
-                //
-
-                if (!NoYsod && error.WebHostHtmlMessage.Length > 0)
+                if (message != null)
                 {
-                    var ysodAttachment = CreateHtmlAttachment("YSOD", error.WebHostHtmlMessage);
+                    ErrorMailEventArgs args = new ErrorMailEventArgs(error, message);
 
-                    if (ysodAttachment != null)
-                        mail.Attachments.Add(ysodAttachment);
+                    try
+                    {
+                        this.OnMailing(args);
+                        this.SendMail(message);
+                        this.OnMailed(args);
+                    }
+                    finally
+                    {
+                        this.OnDisposingMail(args);
+                    }
                 }
-
-                //
-                // Send off the mail with some chance to pre- or post-process
-                // using event.
-                //
-
-                OnMailing(args);
-                SendMail(mail);
-                OnMailed(args);
             }
             finally
             {
-                OnDisposingMail(args);
-                mail.Dispose();
+                if (message != null)
+                {
+                    message.Dispose();
+                }
             }
-        }
-
-        private static MailAttachment CreateHtmlAttachment(string name, string html)
-        {
-            Debug.AssertStringNotEmpty(name);
-            Debug.AssertStringNotEmpty(html);
-
-            return MailAttachment.CreateAttachmentFromString(html,
-                name + ".html", Encoding.UTF8, "text/html");
         }
 
         /// <summary>
@@ -538,35 +434,7 @@ namespace Elmah
             if (mail == null)
                 throw new ArgumentNullException("mail");
 
-            //
-            // Under .NET Framework 2.0, the authentication settings
-            // go on the SmtpClient object rather than mail message
-            // so these have to be set up here.
-            //
-
-            var client = new SmtpClient();
-
-            var host = SmtpServer ?? string.Empty;
-
-            if (host.Length > 0)
-            {
-                client.Host = host;
-                client.DeliveryMethod = SmtpDeliveryMethod.Network;
-            }
-
-            var port = SmtpPort;
-            if (port > 0)
-                client.Port = port;
-
-            var userName = AuthUserName ?? string.Empty;
-            var password = AuthPassword ?? string.Empty;
-
-            if (userName.Length > 0 && password.Length > 0)
-                client.Credentials = new NetworkCredential(userName, password);
-
-            client.EnableSsl = UseSsl;
-
-            client.Send(mail);
+            _mail.SendMessage(mail);
         }
 
         /// <summary>
@@ -612,42 +480,6 @@ namespace Elmah
 
             if (handler != null)
                 handler(this, args);
-        }
-
-        /// <summary>
-        /// Gets the configuration object used by <see cref="OnInit"/> to read
-        /// the settings for module.
-        /// </summary>
-
-        protected virtual object GetConfig()
-        {
-            return Configuration.GetSubsection("errorMail");
-        }
-
-        private static string GetSetting(IDictionary config, string name)
-        {
-            return GetSetting(config, name, null);
-        }
-
-        private static string GetSetting(IDictionary config, string name, string defaultValue)
-        {
-            Debug.Assert(config != null);
-            Debug.AssertStringNotEmpty(name);
-
-            var value = ((string) config[name]) ?? string.Empty;
-
-            if (value.Length == 0)
-            {
-                if (defaultValue == null)
-                {
-                    throw new ApplicationException(string.Format(
-                        "The required configuration setting '{0}' is missing for the error mailing module.", name));
-                }
-
-                value = defaultValue;
-            }
-
-            return value;
         }
     }
 }
