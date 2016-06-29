@@ -92,7 +92,8 @@ namespace Elmah.Tests
             var mocks = new
             {
                 Context = new Mock<HttpContextBase> { DefaultValue = DefaultValue.Mock },
-                Response = new Mock<HttpResponseBase> { DefaultValue = DefaultValue.Mock },
+                Request = new Mock<HttpRequestBase> { DefaultValue = DefaultValue.Mock },
+                Response = new Mock<HttpResponseBase> { DefaultValue = DefaultValue.Mock }
             };
 
             using (var app = allow == null
@@ -103,8 +104,10 @@ namespace Elmah.Tests
                            })
             {
                 mocks.Context.Setup(c => c.ApplicationInstance).Returns(app);
-                mocks.Context.Setup(c => c.Request.PathInfo).Returns("/");
-                mocks.Context.Setup(c => c.Request.IsLocal).Returns(isLocalRequest);
+                mocks.Request.SetupAllProperties();
+                mocks.Request.Setup(r => r.PathInfo).Returns("/");
+                mocks.Request.Setup(r => r.IsLocal).Returns(isLocalRequest);
+                mocks.Context.Setup(c => c.Request).Returns(mocks.Request.Object);
                 mocks.Response.SetupAllProperties();
                 mocks.Context.Setup(c => c.Response).Returns(mocks.Response.Object);
                 mocks.Context.Setup(c => c.Items).Returns(new Hashtable());

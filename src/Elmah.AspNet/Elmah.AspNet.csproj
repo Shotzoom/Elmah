@@ -273,15 +273,12 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AntiXssLibrary" Condition="'$(Configuration)' != 'NETFX 3.5 Debug' And '$(Configuration)' != 'NETFX 3.5 Release'">
-      <HintPath>..\..\..\Packages\AntiXSS.4.2.1\lib\net40\AntiXssLibrary.dll</HintPath>
+    <Reference Include="AntiXssLibrary, Version=4.3.0.0, Culture=neutral, PublicKeyToken=d127efab8a9c114f, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\AntiXSS.4.3.0\lib\net40\AntiXssLibrary.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="AntiXssLibrary">
-      <HintPath>..\..\..\..\Source\..\Lib\Packages\AntiXSS.4.2.1\lib\net40\AntiXssLibrary.dll</HintPath>
-    </Reference>
-    <Reference Include="HtmlSanitizationLibrary">
-      <HintPath>..\..\..\Packages\AntiXSS.4.2.1\lib\net40\HtmlSanitizationLibrary.dll</HintPath>
+    <Reference Include="HtmlSanitizationLibrary, Version=4.3.0.0, Culture=neutral, PublicKeyToken=d127efab8a9c114f, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\AntiXSS.4.3.0\lib\net40\HtmlSanitizationLibrary.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.JScript" />
